@@ -6,6 +6,9 @@ If you've got any questions about bots or would like to report an issue with you
 
 Please note that only global Bot API issues that affect all bots are suitable for this repository.
 
+*This is an edit version of  telegram-bot-api server to support use http proxy.*
+
+
 ## Table of Contents
 - [Installation](#installation)
 - [Dependencies](#dependencies)

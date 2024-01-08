@@ -124,6 +124,9 @@ struct ClientParameters {
   std::shared_ptr<SharedData> shared_data_;
 
   std::shared_ptr<td::NetQueryStats> net_query_stats_;
+  td::string http_proxy_ip = "127.0.0.1";
+  int http_proxy_port = 4780;
+  bool enable_http_proxy = false;
 };
 
 }  // namespace telegram_bot_api
