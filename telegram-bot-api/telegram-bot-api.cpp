@@ -189,6 +189,7 @@ int main(int argc, char *argv[]) {
   td::uint64 max_connections = 0;
   td::uint64 cpu_affinity = 0;
   td::uint64 main_thread_affinity = 0;
+  int idle_timeout = 500;
   ClientManager::TokenRange token_range{0, 1};
 
   parameters->api_id_ = [](auto x) -> td::int32 {
@@ -221,6 +222,8 @@ int main(int argc, char *argv[]) {
                      td::OptionParser::parse_string(parameters->api_hash_));
   options.add_checked_option('p', "http-port", PSLICE() << "HTTP listening port (default is " << http_port << ")",
                              td::OptionParser::parse_integer(http_port));
+  options.add_checked_option('\0', "idle-timeout", PSLICE() << "idle timeout (default is " << idle_timeout << ")",
+                             td::OptionParser::parse_integer(idle_timeout));
   options.add_checked_option('s', "http-stat-port", "HTTP statistics port",
                              td::OptionParser::parse_integer(http_stat_port));
   options.add_option('d', "dir", "server working directory", td::OptionParser::parse_string(working_directory));
@@ -306,10 +309,11 @@ int main(int argc, char *argv[]) {
                                TRY_STATUS(td::IPAddress::get_ip_address(ip_address.str()));
                                parameters->http_proxy_ip = ip_address.str();
                                return td::Status::OK();
-                             });                     
-  
-  options.add_checked_option('\0', "http-proxy-port", PSLICE() << "HTTP proxy port (default is " << parameters->http_proxy_port << ")",
-                             td::OptionParser::parse_integer(parameters->http_proxy_port));                            
+                             });
+
+  options.add_checked_option('\0', "http-proxy-port",
+                             PSLICE() << "HTTP proxy port (default is " << parameters->http_proxy_port << ")",
+                             td::OptionParser::parse_integer(parameters->http_proxy_port));
   options.add_check([&] {
     if (parameters->api_id_ <= 0 || parameters->api_hash_.empty()) {
       return td::Status::Error("You must provide valid api-id and api-hash obtained at https://my.telegram.org");
@@ -486,7 +490,7 @@ int main(int argc, char *argv[]) {
 
   sched
       .create_actor_unsafe<HttpServer>(
-          SharedData::get_client_scheduler_id(), "HttpServer", http_ip_address, http_port,
+          SharedData::get_client_scheduler_id(), "HttpServer", http_ip_address, http_port, idle_timeout,
           [client_manager, shared_data] {
             return td::ActorOwn<td::HttpInboundConnection::Callback>(
                 td::create_actor<HttpConnection>("HttpConnection", client_manager, shared_data));
@@ -497,6 +501,7 @@ int main(int argc, char *argv[]) {
     sched
         .create_actor_unsafe<HttpServer>(
             SharedData::get_client_scheduler_id(), "HttpStatsServer", http_stat_ip_address, http_stat_port,
+            idle_timeout,
             [client_manager] {
               return td::ActorOwn<td::HttpInboundConnection::Callback>(
                   td::create_actor<HttpStatConnection>("HttpStatConnection", client_manager));
